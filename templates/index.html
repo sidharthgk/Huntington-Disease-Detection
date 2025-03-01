@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Classification</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Huntington Disease Detection</h1>
+    <form id="audioForm">
+      <label for="audioFile">Upload an audio for prediction:</label>
+      <input type="file" id="audioFile" name="audio" accept=".wav,.mp3" required>
+      <button type="submit">Predict</button>
+    </form>
+    <p id="result"></p>
+  </div>
+  <script src="/static/script.js"></script>
+</body>
+</html>
