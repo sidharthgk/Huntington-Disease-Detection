@@ -31,7 +31,6 @@ const Dashboard: React.FC = () => {
       try {
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
         // Mock data
         const mockHistory: AnalysisResult[] = [
           { id: 1, date: '2025-04-15', filename: 'patient_recording_1.wav', result: 'Negative', confidence: 92 },
@@ -40,7 +39,6 @@ const Dashboard: React.FC = () => {
           { id: 4, date: '2025-03-15', filename: 'patient_recording_4.wav', result: 'Positive', confidence: 78 },
           { id: 5, date: '2025-02-22', filename: 'patient_recording_5.wav', result: 'Negative', confidence: 91 }
         ];
-        
         setUploadHistory(mockHistory);
       } catch (error) {
         toast.error('Failed to load analysis history');
@@ -48,7 +46,6 @@ const Dashboard: React.FC = () => {
         setIsLoading(false);
       }
     };
-    
     fetchHistory();
   }, []);
 
@@ -75,11 +72,9 @@ const Dashboard: React.FC = () => {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
       const fileType = droppedFile.type;
-      
       if (fileType.includes('audio')) {
         setFile(droppedFile);
         setResult(null);
@@ -94,54 +89,52 @@ const Dashboard: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!file) {
       toast.error('Please select an audio file');
       return;
     }
-    
     setIsUploading(true);
-    
     try {
-      // Simulate API call with progress updates
-      toast.loading('Processing audio file...', { id: 'upload' });
-      
-      // Simulate processing steps
-      await new Promise(resolve => setTimeout(resolve, 800));
-      toast.loading('Analyzing speech patterns...', { id: 'upload' });
-      
-      await new Promise(resolve => setTimeout(resolve, 800));
-      toast.loading('Applying neural network model...', { id: 'upload' });
-      
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Simulate random result for demo purposes
-      const randomResult = Math.random() > 0.5 ? 'Positive' : 'Negative';
-      const randomConfidence = Math.floor(Math.random() * 20) + 75; // 75-95%
-      
-      setResultClass(randomResult);
-      setResult(`Prediction: ${randomResult}`);
-      setConfidence(randomConfidence);
+      // Create a FormData object with the audio file
+      const formData = new FormData();
+      formData.append('audio', file);
+
+      // Call the Flask backend (ensure Flask is running on http://localhost:5000)
+      const response = await fetch('http://localhost:5000/predict', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.prediction) {
+        setResult(`Prediction: ${data.prediction}`);
+        setResultClass(data.prediction);
+        // Optionally update confidence if provided
+        // setConfidence(data.confidence);
+      } else {
+        toast.error('Error: Failed to process the audio file.');
+      }
       
       // Add to history
       const newEntry: AnalysisResult = {
         id: Date.now(),
         date: new Date().toISOString().split('T')[0],
         filename: file.name,
-        result: randomResult,
-        confidence: randomConfidence
+        result: data.prediction,
+        confidence: 0 // update if the backend sends a confidence value
       };
-      
       setUploadHistory([newEntry, ...uploadHistory]);
       toast.success('Analysis completed successfully', { id: 'upload' });
-      
-      // Animate the result appearance
+
+      // Optionally, add some animation for result appearance
       document.getElementById('result-container')?.classList.add('animate-pulse');
       setTimeout(() => {
         document.getElementById('result-container')?.classList.remove('animate-pulse');
       }, 1000);
-      
     } catch (error) {
+      console.error('An error occurred:', error);
       toast.error('Failed to analyze the audio file', { id: 'upload' });
     } finally {
       setIsUploading(false);
@@ -149,7 +142,6 @@ const Dashboard: React.FC = () => {
   };
 
   const deleteHistoryItem = (id: number) => {
-    // Confirm before deleting
     if (window.confirm('Are you sure you want to delete this analysis?')) {
       setUploadHistory(uploadHistory.filter(item => item.id !== id));
       toast.success('Analysis deleted');
@@ -178,7 +170,6 @@ const Dashboard: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600">Welcome back, {user?.name || 'User'}</p>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Upload Section */}
           <div className="lg:col-span-2">
@@ -187,7 +178,6 @@ const Dashboard: React.FC = () => {
                 <FileAudio className="h-5 w-5 mr-2 text-blue-600" />
                 Audio Analysis
               </h2>
-              
               <form onSubmit={handleSubmit}>
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -219,7 +209,6 @@ const Dashboard: React.FC = () => {
                     </label>
                   </div>
                 </div>
-                
                 <button
                   type="submit"
                   disabled={!file || isUploading}
@@ -235,7 +224,6 @@ const Dashboard: React.FC = () => {
                   )}
                 </button>
               </form>
-              
               {result && (
                 <div 
                   id="result-container"
@@ -254,7 +242,7 @@ const Dashboard: React.FC = () => {
                       <div className="flex justify-between items-center">
                         <h3 className="text-sm font-medium">{result}</h3>
                         <span className="text-sm font-medium">
-                          Confidence: {confidence}%
+                          Confidence: {confidence || 'N/A'}%
                         </span>
                       </div>
                       <div className="mt-2 text-sm">
@@ -268,7 +256,7 @@ const Dashboard: React.FC = () => {
                         <div className="w-full bg-gray-200 rounded-full h-2.5">
                           <div 
                             className={`h-2.5 rounded-full ${resultClass === 'Positive' ? 'bg-red-600' : 'bg-green-600'}`} 
-                            style={{ width: `${confidence}%` }}
+                            style={{ width: `${confidence || 0}%` }}
                           ></div>
                         </div>
                       </div>
@@ -289,7 +277,6 @@ const Dashboard: React.FC = () => {
                             </>
                           )}
                         </button>
-                        
                         {showDetails && (
                           <div className="mt-3 text-sm border-t pt-3 animate-fadeIn">
                             <p className="mb-2">
@@ -310,7 +297,6 @@ const Dashboard: React.FC = () => {
               )}
             </div>
           </div>
-          
           {/* Info Section */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6 transition-all duration-300 hover:shadow-md animate-fadeIn">
@@ -322,9 +308,7 @@ const Dashboard: React.FC = () => {
                 <p>
                   Our AI model analyzes speech patterns to detect potential signs of Huntington Disease.
                 </p>
-                <p>
-                  For best results:
-                </p>
+                <p>For best results:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li className="transition-transform duration-200 hover:translate-x-1">Use clear audio recordings</li>
                   <li className="transition-transform duration-200 hover:translate-x-1">Ensure the recording is at least 30 seconds long</li>
@@ -336,7 +320,6 @@ const Dashboard: React.FC = () => {
                 </p>
               </div>
             </div>
-            
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-md animate-fadeIn">
               <h2 className="text-lg font-semibold mb-4 text-blue-800">Need Help?</h2>
               <p className="text-sm text-blue-700 mb-4">
@@ -358,7 +341,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-        
         {/* History Section */}
         <div className="mt-8 animate-fadeIn">
           <div className="bg-white rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-md">
@@ -367,7 +349,6 @@ const Dashboard: React.FC = () => {
                 <FileAudio className="h-5 w-5 mr-2 text-blue-600" />
                 Analysis History
               </h2>
-              
               <div className="flex flex-col sm:flex-row gap-3 mt-3 sm:mt-0">
                 <div className="flex items-center">
                   <label htmlFor="filter" className="mr-2 text-sm text-gray-600">Filter:</label>
@@ -382,7 +363,6 @@ const Dashboard: React.FC = () => {
                     <option value="negative">Negative Only</option>
                   </select>
                 </div>
-                
                 <button 
                   onClick={toggleSortOrder}
                   className="text-sm text-blue-600 hover:text-blue-800 flex items-center transition-colors duration-300"
@@ -399,14 +379,12 @@ const Dashboard: React.FC = () => {
                     </>
                   )}
                 </button>
-                
                 <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center transition-colors duration-300">
                   <Download className="h-4 w-4 mr-1" />
                   Export Data
                 </button>
               </div>
             </div>
-            
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
                 <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
