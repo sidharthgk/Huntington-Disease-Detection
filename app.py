@@ -6,7 +6,10 @@ from tensorflow.keras.models import load_model
 from sklearn.preprocessing import LabelEncoder
 import warnings
 
-app = Flask(__name__)
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+
+app = Flask(__name__, template_folder="Frontend")
 
 # Ensure 'uploads' directory exists
 if not os.path.exists('uploads'):
