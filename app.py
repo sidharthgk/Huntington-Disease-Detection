@@ -5,8 +5,13 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import LabelEncoder
 import warnings
+from flask_cors import CORS
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+app = Flask(__name__, template_folder="Frontend")
+CORS(app)  # Enable CORS for all routes
+
 
 
 app = Flask(__name__, template_folder="Frontend")

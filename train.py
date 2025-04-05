@@ -31,7 +31,7 @@ def load_audio_data(data_dir):
     return np.array(features), np.array(labels)
 
 # Load data from your dataset folder
-data_dir = r"D:\GP 14\Audio_files-20250220T085942Z-001\Audio_files"  # Adjusted path
+data_dir = r"C:\Users\vgopa\Datasets\Audio_files"
 features, labels = load_audio_data(data_dir)
 
 # Encode the labels

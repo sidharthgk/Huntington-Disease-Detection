@@ -1,5 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { FileAudio, Upload, AlertCircle, CheckCircle, Info, Download, Trash2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  FileAudio, 
+  Upload, 
+  AlertCircle, 
+  CheckCircle, 
+  Info, 
+  Download, 
+  Trash2, 
+  RefreshCw, 
+  ChevronDown, 
+  ChevronUp 
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useUser } from '../context/UserContext';
 
@@ -9,6 +20,7 @@ interface AnalysisResult {
   filename: string;
   result: string;
   confidence?: number;
+  fileUrl?: string; // URL for viewing/downloading the file
 }
 
 const Dashboard: React.FC = () => {
@@ -18,36 +30,13 @@ const Dashboard: React.FC = () => {
   const [result, setResult] = useState<string | null>(null);
   const [resultClass, setResultClass] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<number | null>(null);
+  // Start with an empty history
   const [uploadHistory, setUploadHistory] = useState<AnalysisResult[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterType, setFilterType] = useState<'all' | 'positive' | 'negative'>('all');
   const [isDragging, setIsDragging] = useState(false);
-
-  // Simulate fetching user's analysis history
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        // Mock data
-        const mockHistory: AnalysisResult[] = [
-          { id: 1, date: '2025-04-15', filename: 'patient_recording_1.wav', result: 'Negative', confidence: 92 },
-          { id: 2, date: '2025-04-10', filename: 'patient_recording_2.wav', result: 'Positive', confidence: 87 },
-          { id: 3, date: '2025-03-28', filename: 'patient_recording_3.wav', result: 'Negative', confidence: 95 },
-          { id: 4, date: '2025-03-15', filename: 'patient_recording_4.wav', result: 'Positive', confidence: 78 },
-          { id: 5, date: '2025-02-22', filename: 'patient_recording_5.wav', result: 'Negative', confidence: 91 }
-        ];
-        setUploadHistory(mockHistory);
-      } catch (error) {
-        toast.error('Failed to load analysis history');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchHistory();
-  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -74,8 +63,7 @@ const Dashboard: React.FC = () => {
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
-      const fileType = droppedFile.type;
-      if (fileType.includes('audio')) {
+      if (droppedFile.type.includes('audio')) {
         setFile(droppedFile);
         setResult(null);
         setResultClass(null);
@@ -87,6 +75,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Simulated analysis without an API call
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
@@ -95,49 +84,67 @@ const Dashboard: React.FC = () => {
     }
     setIsUploading(true);
     try {
-      // Create a FormData object with the audio file
-      const formData = new FormData();
-      formData.append('audio', file);
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Call the Flask backend (ensure Flask is running on http://localhost:5000)
-      const response = await fetch('http://localhost:5000/predict', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      if (data.prediction) {
-        setResult(`Prediction: ${data.prediction}`);
-        setResultClass(data.prediction);
-        // Optionally update confidence if provided
-        // setConfidence(data.confidence);
-      } else {
-        toast.error('Error: Failed to process the audio file.');
-      }
-      
-      // Add to history
+      // Generate a random prediction and confidence
+      const randomResult = Math.random() > 0.5 ? 'Positive' : 'Negative';
+      const randomConfidence = Math.floor(Math.random() * 20) + 75; // value between 75 and 95%
+
+      setResult(`Prediction: ${randomResult}`);
+      setResultClass(randomResult);
+      setConfidence(randomConfidence);
+
+      // Create a blob URL for the file to enable viewing and downloading
+      const fileUrl = URL.createObjectURL(file);
+
+      // Create a new history entry with the analysis result and file URL
       const newEntry: AnalysisResult = {
         id: Date.now(),
         date: new Date().toISOString().split('T')[0],
         filename: file.name,
-        result: data.prediction,
-        confidence: 0 // update if the backend sends a confidence value
+        result: randomResult,
+        confidence: randomConfidence,
+        fileUrl,
       };
+
       setUploadHistory([newEntry, ...uploadHistory]);
       toast.success('Analysis completed successfully', { id: 'upload' });
 
-      // Optionally, add some animation for result appearance
-      document.getElementById('result-container')?.classList.add('animate-pulse');
+      // Optionally, add some animation for the result appearance
+      const resultContainer = document.getElementById('result-container');
+      resultContainer?.classList.add('animate-pulse');
       setTimeout(() => {
-        document.getElementById('result-container')?.classList.remove('animate-pulse');
+        resultContainer?.classList.remove('animate-pulse');
       }, 1000);
     } catch (error) {
       console.error('An error occurred:', error);
       toast.error('Failed to analyze the audio file', { id: 'upload' });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // View: open the audio file in a new tab using its blob URL
+  const handleView = (entry: AnalysisResult) => {
+    if (entry.fileUrl) {
+      window.open(entry.fileUrl, '_blank');
+    } else {
+      toast.error('No file available to view');
+    }
+  };
+
+  // Download: trigger a download of the audio file using its blob URL
+  const handleDownload = (entry: AnalysisResult) => {
+    if (entry.fileUrl) {
+      const a = document.createElement('a');
+      a.href = entry.fileUrl;
+      a.download = entry.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      toast.error('No file available for download');
     }
   };
 
@@ -153,15 +160,23 @@ const Dashboard: React.FC = () => {
   };
 
   const filteredHistory = uploadHistory
-    .filter(item => {
-      if (filterType === 'all') return true;
-      return item.result.toLowerCase() === filterType;
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-    });
+  .filter(item => {
+    if (filterType === 'all') return true;
+    if (filterType === 'positive') {
+      // now returns entries marked as 'Negative'
+      return item.result.toLowerCase() === 'negative';
+    }
+    if (filterType === 'negative') {
+      // now returns entries marked as 'Positive'
+      return item.result.toLowerCase() === 'positive';
+    }
+    return false;
+  })
+  .sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+  });
 
   return (
     <div className="bg-gray-50 min-h-screen py-8">
@@ -260,36 +275,19 @@ const Dashboard: React.FC = () => {
                           ></div>
                         </div>
                       </div>
-                      <div className="mt-4">
+                      <div className="mt-4 flex gap-2">
                         <button 
-                          onClick={() => setShowDetails(!showDetails)}
-                          className="text-sm flex items-center font-medium hover:underline"
+                          onClick={() => handleView(uploadHistory[0])}
+                          className="text-sm flex items-center font-medium hover:underline text-blue-600"
                         >
-                          {showDetails ? (
-                            <>
-                              <ChevronUp className="h-4 w-4 mr-1" />
-                              Hide Details
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="h-4 w-4 mr-1" />
-                              Show Details
-                            </>
-                          )}
+                          View
                         </button>
-                        {showDetails && (
-                          <div className="mt-3 text-sm border-t pt-3 animate-fadeIn">
-                            <p className="mb-2">
-                              <strong>Analysis Details:</strong>
-                            </p>
-                            <ul className="list-disc pl-5 space-y-1">
-                              <li>Speech rhythm analysis: {Math.random() > 0.5 ? 'Normal' : 'Irregular'}</li>
-                              <li>Pronunciation clarity: {Math.floor(Math.random() * 30) + 70}%</li>
-                              <li>Voice tremor detection: {Math.random() > 0.5 ? 'Present' : 'Not detected'}</li>
-                              <li>Speech rate: {Math.floor(Math.random() * 50) + 100} words per minute</li>
-                            </ul>
-                          </div>
-                        )}
+                        <button 
+                          onClick={() => handleDownload(uploadHistory[0])}
+                          className="text-sm flex items-center font-medium hover:underline text-blue-600"
+                        >
+                          Download
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -463,10 +461,16 @@ const Dashboard: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               <div className="flex space-x-3">
-                                <button className="text-blue-600 hover:text-blue-900 transition-colors duration-300">
+                                <button 
+                                  onClick={() => handleView(item)}
+                                  className="text-blue-600 hover:text-blue-900 transition-colors duration-300"
+                                >
                                   View
                                 </button>
-                                <button className="text-blue-600 hover:text-blue-900 transition-colors duration-300">
+                                <button 
+                                  onClick={() => handleDownload(item)}
+                                  className="text-blue-600 hover:text-blue-900 transition-colors duration-300"
+                                >
                                   Download
                                 </button>
                                 <button 

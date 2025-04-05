@@ -60,21 +60,6 @@ const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, setIsAuthenticated }) 
           </div>
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              <Link to="/" className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                isActive('/') ? 'bg-blue-700 text-white' : 'text-blue-100 hover:bg-blue-700/70 hover:text-white'
-              }`}>
-                Home
-              </Link>
-              <Link to="/about" className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                isActive('/about') ? 'bg-blue-700 text-white' : 'text-blue-100 hover:bg-blue-700/70 hover:text-white'
-              }`}>
-                About
-              </Link>
-              <Link to="/contact" className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                isActive('/contact') ? 'bg-blue-700 text-white' : 'text-blue-100 hover:bg-blue-700/70 hover:text-white'
-              }`}>
-                Contact
-              </Link>
               {isAuthenticated ? (
                 <>
                   <Link to="/dashboard" className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
