@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, jsonify, render_template
 import librosa
 import numpy as np
+import noisereduce as nr  # For noise reduction
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import LabelEncoder
 import warnings
@@ -10,11 +11,7 @@ from flask_cors import CORS
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 app = Flask(__name__, template_folder="Frontend")
-CORS(app)  # Enable CORS for all routes
-
-
-
-app = Flask(__name__, template_folder="Frontend")
+CORS(app)
 
 # Ensure 'uploads' directory exists
 if not os.path.exists('uploads'):
@@ -26,6 +23,20 @@ label_classes = np.load("label_encoder.npy", allow_pickle=True)
 label_encoder = LabelEncoder()
 label_encoder.classes_ = label_classes
 
+def enhance_audio(audio, sr):
+    target_sr = 16000
+    # Resample to 16kHz if needed
+    if sr != target_sr:
+        audio = librosa.resample(audio, orig_sr=sr, target_sr=target_sr)
+        sr = target_sr
+    # Noise reduction
+    audio = nr.reduce_noise(y=audio, sr=sr)
+    # Silence removal
+    audio, _ = librosa.effects.trim(audio)
+    # Normalization
+    audio = librosa.util.normalize(audio)
+    return audio, sr
+
 def preprocess_audio(file_path):
     try:
         if not file_path.endswith(('.wav', '.mp3')):
@@ -33,6 +44,8 @@ def preprocess_audio(file_path):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning, module="librosa")
             audio, sr = librosa.load(file_path, sr=None)
+        # Apply enhancements: noise reduction, silence removal, normalization, resampling
+        audio, sr = enhance_audio(audio, sr)
         mfccs = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=40)
         mfccs_mean = np.mean(mfccs.T, axis=0)
         return np.expand_dims(mfccs_mean, axis=0)

@@ -1,11 +1,26 @@
 import os
 import librosa
 import numpy as np
+import noisereduce as nr  # For noise reduction
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import LabelEncoder
+
+def enhance_audio(audio, sr):
+    target_sr = 16000
+    # Resample to 16kHz if needed
+    if sr != target_sr:
+        audio = librosa.resample(audio, orig_sr=sr, target_sr=target_sr)
+        sr = target_sr
+    # Noise reduction
+    audio = nr.reduce_noise(y=audio, sr=sr)
+    # Silence removal
+    audio, _ = librosa.effects.trim(audio)
+    # Normalization
+    audio = librosa.util.normalize(audio)
+    return audio, sr
 
 # Step 1: Load and preprocess audio data
 def load_audio_data(data_dir):
@@ -21,6 +36,8 @@ def load_audio_data(data_dir):
             file_path = os.path.join(label_path, file)
             try:
                 audio, sr = librosa.load(file_path, sr=None)
+                # Apply enhancements: noise reduction, silence removal, normalization, resampling
+                audio, sr = enhance_audio(audio, sr)
                 mfccs = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=40)
                 mfccs_mean = np.mean(mfccs.T, axis=0)
                 features.append(mfccs_mean)
@@ -40,7 +57,7 @@ labels_encoded = label_encoder.fit_transform(labels)
 labels_categorical = to_categorical(labels_encoded)
 
 # Save the LabelEncoder classes
-np.save("label_encoder.npy", label_encoder.classes_)  # This will create label_encoder.npy
+np.save("label_encoder.npy", label_encoder.classes_)
 
 # Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(features, labels_categorical, test_size=0.2, random_state=42)
@@ -64,4 +81,4 @@ test_loss, test_accuracy = model.evaluate(X_test, y_test)
 print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}")
 
 # Step 5: Save the trained model
-model.save("huntington_audio_model.h5")  # This will create huntington_audio_model.h5
+model.save("huntington_audio_model.h5")
